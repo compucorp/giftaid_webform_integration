@@ -1,0 +1,85 @@
+<?php
+
+/**
+ * Implements hook_form_alter().
+ */
+function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) {
+    if (isset($form_state['input']['submitted'])) {
+        if (strpos($form_id, 'webform_client_form_') !== FALSE && !empty($form['#node']->webform_civicrm)) {
+            $form['#submit'][] = 'giftaid_wf_submit';
+        }
+    }
+}
+
+function giftaid_wf_submit($form, &$form_state) {
+    // get contact id
+    $contactId = $form_state['civicrm']['ent']['contact']['1']['id'];
+
+    // get field key for eligibility
+    $webformFields = $form_state['webform']['component_tree']['children'];
+    $eligibilityFieldId = get_field_key($webformFields);
+
+    // get address
+    $address = get_address($form_state['input']);
+    
+    $postCode = get_post_code($form_state['input']);
+    
+    // donot submit unless postcode is set
+    if($postCode == ""){
+        return false;
+    }
+
+    // submit the values to the database
+    $submittedValues = $form_state['values']['submitted'];
+    if (isset($submittedValues[$eligibilityFieldId]) && $submittedValues[$eligibilityFieldId] == 1) {
+        $params = array(
+            'entity_id' => $contactId,
+            'eligible_for_gift_aid' => $submittedValues[$eligibilityFieldId],
+            'start_date' => date('Y-m-d H:i:s'),
+            'address' => $address,
+            'post_code' => $postCode,
+        );
+        CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
+    }
+}
+
+
+function get_field_key($webformFields) {
+    $customFieldData = civicrm_api3('CustomField', 'get', array(
+        'sequential' => 1,
+        'return' => "custom_group_id,id",
+        'name' => "Eligible_For_Gift_Aid",
+        'custom_group_id' => "Gift_Aid",
+    ));
+
+    if (!$customFieldData['is_error']) {
+        $customGroupId = $customFieldData['values'][0]['custom_group_id'];
+        $customFieldId = $customFieldData['values'][0]['id'];
+
+        $fieldKey = "cg{$customGroupId}_custom_{$customFieldId}";
+    }
+
+    foreach ($webformFields as $webformField) {
+        if ($webformField['form_key'] == "civicrm_1_contribution_1_{$fieldKey}") {
+            $submitFieldId = $webformField['cid'];
+            return $submitFieldId;
+        }
+    }
+
+    return false;
+}
+
+function get_address($input) {
+
+    $address = $input['billing_street_address-5'] . ', '
+            . $input['billing_city-5'] . ', '
+            . CRM_Core_PseudoConstant::stateProvince($input['billing_state_province_id-5'], FALSE) . ', ';
+    return $address;
+}
+
+function get_post_code($input) {
+
+    //TODO: Validate post code
+
+    return $input['billing_postal_code-5'];
+}
