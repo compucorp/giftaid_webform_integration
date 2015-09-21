@@ -21,11 +21,11 @@ function giftaid_wf_submit($form, &$form_state) {
 
     // get address
     $address = get_address($form_state['input']);
-    
+
     $postCode = get_post_code($form_state['input']);
-    
+
     // donot submit unless postcode is set
-    if($postCode == ""){
+    if ($postCode == "") {
         return false;
     }
 
@@ -42,7 +42,6 @@ function giftaid_wf_submit($form, &$form_state) {
         CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
     }
 }
-
 
 function get_field_key($webformFields) {
     $customFieldData = civicrm_api3('CustomField', 'get', array(
@@ -70,16 +69,22 @@ function get_field_key($webformFields) {
 }
 
 function get_address($input) {
+    if (isset($input['billing_street_address-5'])) {
+        $address = $input['billing_street_address-5'] . ', '
+                . $input['billing_city-5'] . ', '
+                . CRM_Core_PseudoConstant::stateProvince($input['billing_state_province_id-5'], FALSE) . ', ';
+        return $address;
+    }
 
-    $address = $input['billing_street_address-5'] . ', '
-            . $input['billing_city-5'] . ', '
-            . CRM_Core_PseudoConstant::stateProvince($input['billing_state_province_id-5'], FALSE) . ', ';
-    return $address;
+    return false;
 }
 
 function get_post_code($input) {
 
     //TODO: Validate post code
+    if (isset($input['billing_postal_code-5'])) {
+        return $input['billing_postal_code-5'];
+    }
 
-    return $input['billing_postal_code-5'];
+    return false;
 }
