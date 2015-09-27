@@ -35,7 +35,7 @@ function giftaid_wf_submit($form, &$form_state) {
         $params = array(
             'entity_id' => $contactId,
             'eligible_for_gift_aid' => $submittedValues[$eligibilityFieldId],
-            'start_date' => date('Y-m-d H:i:s'),
+            //'start_date' => date('Y-m-d H:i:s'), //Donot pass start date using this method. it adds the time differece to declaration table.
             'address' => $address,
             'post_code' => $postCode,
         );
