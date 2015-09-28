@@ -32,10 +32,12 @@ function giftaid_wf_submit($form, &$form_state) {
     // submit the values to the database
     $submittedValues = $form_state['values']['submitted'];
     if (isset($submittedValues[$eligibilityFieldId]) && $submittedValues[$eligibilityFieldId] == 1) {
+        // get contribution id
+        $contributionId = $form_state['civicrm']['ent']['contribution']['1']['id']; 
         $params = array(
             'entity_id' => $contactId,
             'eligible_for_gift_aid' => $submittedValues[$eligibilityFieldId],
-            //'start_date' => date('Y-m-d H:i:s'), //Donot pass start date using this method. it adds the time differece to declaration table.
+            'start_date' => get_contribution_receive_date($contributionId),
             'address' => $address,
             'post_code' => $postCode,
         );
@@ -84,6 +86,21 @@ function get_post_code($input) {
     //TODO: Validate post code
     if (isset($input['billing_postal_code-5'])) {
         return $input['billing_postal_code-5'];
+    }
+
+    return false;
+}
+
+function get_contribution_receive_date($contributionId) {
+    $result = civicrm_api3('Contribution', 'get', array(
+        'sequential' => 1,
+        'return' => "receive_date",
+        'id' => $contributionId,
+        'options' => array('limit' => 1),
+    ));
+
+    if (!$result['is_error']) {
+        return $result['values'][0]['receive_date'];
     }
 
     return false;
