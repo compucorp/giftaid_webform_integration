@@ -54,7 +54,8 @@ function giftaid_wf_submit($form, &$form_state) {
     $webformFields = $form_state['webform']['component_tree']['children'];
 
     $eligibleForGiftAidField = get_eligibility_form_key_name();
-    $eligibilityFieldId = get_cid($webformNid, $eligibleForGiftAidField)['cid'];
+    $eligibilityField = get_cid($webformNid, $eligibleForGiftAidField);
+    $eligibilityFieldId = $eligibilityField['cid'];
 
     // get address
     $address = get_address($webformNid, $form_state['values']['submitted']);
@@ -102,9 +103,14 @@ function get_eligibility_form_key_name() {
 
 function get_address($nid, $input) {
 
-    $streetFieldId = get_cid($nid, 'civicrm_1_contact_1_address_street_address')['cid'];
-    $cityFieldId = get_cid($nid, 'civicrm_1_contact_1_address_city')['cid'];
-    $stateFieldId = get_cid($nid, 'civicrm_1_contact_1_address_state_province_id')['cid'];
+    $streetField = get_cid($nid, 'civicrm_1_contact_1_address_street_address');
+    $streetFieldId = $streetField['cid'];
+    
+    $cityField = get_cid($nid, 'civicrm_1_contact_1_address_city');
+    $cityFieldId = $cityField['cid'];
+    
+    $stateField = get_cid($nid, 'civicrm_1_contact_1_address_state_province_id');
+    $stateFieldId = $stateField['cid'];
 
     $address = $input[$streetFieldId] . ', '
             . $input[$cityFieldId] . ', '
@@ -115,7 +121,8 @@ function get_address($nid, $input) {
 
 function get_post_code($nid, $input) {
 
-    $postalFieldId = get_cid($nid, 'civicrm_1_contact_1_address_postal_code')['cid'];
+    $postalField = get_cid($nid, 'civicrm_1_contact_1_address_postal_code');
+    $postalFieldId = $postalField['cid'];
 
     //TODO: Validate post code
     if (isset($input[$postalFieldId])) {
