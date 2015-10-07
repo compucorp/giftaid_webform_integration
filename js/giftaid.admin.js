@@ -53,16 +53,13 @@
 
             function checkRequiredFields() {
                 if ($('[name=' + eligibilityFieldName + ']').prop('checked') == true) {
-                    //alert("Hello");
                     var msg = checkAddressFields();
                     if (msg !== true) {
                         if (!$('.giftaid-address-alert').length) {
-                            // var msg = "You must enable Home address fields in order to make gift aid work.";
                             $('[name=' + eligibilityFieldName + ']')
                                     .closest(".form-wrapper")
                                     .after('<div class="messages error giftaid-address-alert">' + msg + '</div>')
                         }else{
-                            //alert('hello');
                             $('.giftaid-address-alert').html(msg);
                         }
                     }
