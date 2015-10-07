@@ -52,9 +52,6 @@
             }
 
             function checkRequiredFields() {
-                console.log(context);
-                //alert('hello');
-                //if (this.name == eligibilityFieldName && this.checked) {
                 if ($('[name=' + eligibilityFieldName + ']').prop('checked') == true) {
                     //alert("Hello");
                     var msg = checkAddressFields();
@@ -69,7 +66,6 @@
                             $('.giftaid-address-alert').html(msg);
                         }
                     }
-                    //} else if (this.name == eligibilityFieldName && this.checked == false) {
                 } else if ($('[name=' + eligibilityFieldName + ']').prop('checked') == false) {
                     if ($('.giftaid-address-alert').length) {
                         $('.giftaid-address-alert').remove();
