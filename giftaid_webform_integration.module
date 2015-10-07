@@ -95,7 +95,8 @@ function giftaid_wf_submit($form, &$form_state) {
 }
 
 function get_eligibility_form_key_name() {
-    $customFieldData = wf_civicrm_api('CustomField', 'get', array(
+    civicrm_initialize();
+    $customFieldData = civicrm_api3('CustomField', 'get', array(
         'sequential' => 1,
         'return' => "custom_group_id,id",
         'name' => "Eligible_For_Gift_Aid",
