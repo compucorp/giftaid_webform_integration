@@ -1,5 +1,15 @@
 <?php
 
+function giftaid_webform_integration_init() {
+    global $base_url;
+    
+    $settings = array(
+        'basePath' => $base_url,
+        'eligibilityFieldName' => get_eligibility_form_key_name(),
+    );
+    drupal_add_js(array('giftaidWebformIntegration' => $settings), 'setting');
+}
+
 /**
  * Implements hook_form_alter().
  */
@@ -15,12 +25,12 @@ function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) 
                 $form['#submit'][] = 'giftaid_wf_submit';
             }
 
-            $form['#validate'][] = 'giftaid_wf_address_component_validate';
+            //$form['#validate'][] = 'giftaid_wf_address_component_validate';
         }
     }
 }
 
-function giftaid_wf_address_component_validate($form, &$form_state) {
+/*function giftaid_wf_address_component_validate($form, &$form_state) {
     $fieldsToCheck = array(
         'civicrm_1_contact_1_address_street_address',
         'civicrm_1_contact_1_address_city',
@@ -35,7 +45,7 @@ function giftaid_wf_address_component_validate($form, &$form_state) {
     }
 
     return true;
-}
+}*/
 
 function giftaid_wf_submit($form, &$form_state) {
     
