@@ -14,7 +14,10 @@ function giftaid_webform_integration_init() {
  * Implements hook_form_alter().
  */
 function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) {
-
+    if($form_id == 'wf_crm_configure_form'){
+        array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
+    }
+    
     if (strpos($form_id, 'webform_client_form_') !== FALSE && !empty($form['#node']->webform_civicrm)) {
         $enabledFields = get_webform_enabled_fields($form['#node']->nid);
         $eligibleForGiftAidField = get_eligibility_form_key_name();
