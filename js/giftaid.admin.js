@@ -59,9 +59,11 @@
                             $('[name=' + eligibilityFieldName + ']')
                                     .closest(".form-wrapper")
                                     .after('<div class="messages error giftaid-address-alert">' + msg + '</div>')
-                        }else{
+                        } else {
                             $('.giftaid-address-alert').html(msg);
                         }
+                    } else if ($('.giftaid-address-alert').length) {
+                        $('.giftaid-address-alert').remove();
                     }
                 } else if ($('[name=' + eligibilityFieldName + ']').prop('checked') == false) {
                     if ($('.giftaid-address-alert').length) {
