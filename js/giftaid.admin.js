@@ -58,7 +58,7 @@
                         if (!$('.giftaid-address-alert').length) {
                             $('[name=' + eligibilityFieldName + ']')
                                     .closest(".form-wrapper")
-                                    .after('<div class="messages error giftaid-address-alert">' + msg + '</div>')
+                                    .before('<div class="messages error giftaid-address-alert">' + msg + '</div>')
                         } else {
                             $('.giftaid-address-alert').html(msg);
                         }
