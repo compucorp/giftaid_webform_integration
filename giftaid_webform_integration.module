@@ -84,7 +84,7 @@ function giftaid_wf_submit($form, &$form_state) {
     }
 
     $submittedValues = $form_state['values']['submitted'];
-    if (isset($submittedValues[$eligibilityFieldId]) && $submittedValues[$eligibilityFieldId] == 1) {
+    if (isset($submittedValues[$eligibilityFieldId]) && $submittedValues[$eligibilityFieldId] >= 1) {
         // get contribution id
         $contributionId = $form_state['civicrm']['ent']['contribution']['1']['id'];
         $params = array(
