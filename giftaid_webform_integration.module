@@ -84,7 +84,9 @@ function giftaid_wf_submission($node, $submission) {
  * @return string|boolean
  */
 function get_eligibility_form_key_name() {
-  define('ELIGIBILITY_FIELD_KEY_PREFIX', 'civicrm_1_contribution_1_');
+  if(!defined('ELIGIBILITY_FIELD_KEY_PREFIX')) {
+    define('ELIGIBILITY_FIELD_KEY_PREFIX', 'civicrm_1_contribution_1_');
+  }
   //CiviCRM boostrap.
   civicrm_initialize();
   //Get custom group and custom field ID for Eligible_For_Gift_Field from CiviCRM.
