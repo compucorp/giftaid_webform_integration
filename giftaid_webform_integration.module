@@ -1,8 +1,12 @@
 <?php
 
+/**
+ * Implements hook_init().
+ */
 function giftaid_webform_integration_init() {
   if (check_giftaid_installed()) {
     global $base_url;
+    //Add our custom js to webform_civicrm admin pages.
     $settings = array(
       'basePath' => $base_url,
       'eligibilityFieldName' => get_eligibility_form_key_name(),
@@ -11,12 +15,15 @@ function giftaid_webform_integration_init() {
   }
 }
 
+/**
+ * Implements hook_webform_submission_insert().
+ */
 function giftaid_webform_integration_webform_submission_insert($node, $submission) {
   if (!empty($node->webform_civicrm)) {
     $enabledFields = get_webform_enabled_fields($node->nid);
     $eligibleForGiftAidField = get_eligibility_form_key_name();
 
-    // Only implement when Gift Aid field is enabled
+    //Only implement when Gift Aid field is enabled
     if (field_exists($enabledFields, array($eligibleForGiftAidField))) {
       giftaid_wf_submission($node, $submission);
     }
@@ -28,35 +35,32 @@ function giftaid_webform_integration_webform_submission_insert($node, $submissio
  */
 function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) {
   if (check_giftaid_installed()) {
-    if($form_id == 'wf_crm_configure_form'){
+    if($form_id == 'wf_crm_configure_form') {
       array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
     }
   }
 }
 
 function giftaid_wf_submission($node, $submission) {
-  // Webform node Id
   $webformNid = $submission->nid;
-    
   $submittedValues = $submission->data;
-    
+  $webformFields = array();
   $webformFields = $node->webform['components'];
   foreach($node->webform['components'] as $component) {
     $webformFields[$component['form_key']] = $component['cid'];
   }
-    
-  // get contact id
+
   $contactId = $submittedValues[$webformFields['civicrm_1_contact_1_contact_existing']][0];
 
-  // get field key for eligibility
+  //get field key for eligibility
   $eligibleForGiftAidField = get_eligibility_form_key_name();
   $eligibilityFieldId = $webformFields[$eligibleForGiftAidField];
 
-  // get address
+  //get address
   $address = get_address($submittedValues, $webformFields);
   $postCode = $submittedValues[$webformFields['civicrm_1_contact_1_address_postal_code']][0];
 
-  // donot submit unless postcode is set
+  //donot submit unless postcode is set
   if (!$postCode) {
     return false;
   }
@@ -69,38 +73,63 @@ function giftaid_wf_submission($node, $submission) {
       'address' => $address,
       'post_code' => $postCode,
     );
+    //Create giftaid declaration in CiviCRM
     CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
   }
 }
 
+/**
+ * Custom function to return giftaid eligibility field's form_key on a webform.
+ * 
+ * @return string|boolean
+ */
 function get_eligibility_form_key_name() {
+  define('ELIGIBILITY_FIELD_KEY_PREFIX', 'civicrm_1_contribution_1_');
+  //CiviCRM boostrap.
   civicrm_initialize();
+  //Get custom group and custom field ID for Eligible_For_Gift_Field from CiviCRM.
   $customFieldData = civicrm_api3('CustomField', 'get', array(
     'sequential' => 1,
     'return' => "custom_group_id,id",
     'name' => "Eligible_For_Gift_Aid",
     'custom_group_id' => "Gift_Aid",
   ));
-
-  if (!$customFieldData['is_error']) {
+  /*
+   * Webform_CiviCRM follows specific logic to name civicrm fields on webform.
+   * Below logic provides us the form_key assigned to "Eligible for Gift Aid" field
+   * on webform.
+   */
+  if (!$customFieldData['is_error'] && $customFieldData['count'] > 0) {
     $customGroupId = $customFieldData['values'][0]['custom_group_id'];
     $customFieldId = $customFieldData['values'][0]['id'];
 
     $fieldKey = "cg{$customGroupId}_custom_{$customFieldId}";
 
-    return "civicrm_1_contribution_1_{$fieldKey}";
+    return ELIGIBILITY_FIELD_KEY_PREFIX . $fieldKey;
   }
   return false;
 }
 
+/**
+ * Fetch address components from webform submission and return addresss as string.
+ * 
+ * @param array $submittedValues
+ * @param array $webformFields
+ * @return string $address
+ */
 function get_address($submittedValues, $webformFields) {
   $address = $submittedValues[$webformFields['civicrm_1_contact_1_address_street_address']][0] . ', ' 
            . $submittedValues[$webformFields['civicrm_1_contact_1_address_city']][0] . ', ' 
            . $submittedValues[$webformFields['civicrm_1_contact_1_address_state_province_id']][0];
-    //. CRM_Core_PseudoConstant::stateProvince($input[$stateFieldId], FALSE);
   return $address;
 }
 
+/**
+ * Get receive_date from recently created contribution for the contact.
+ * 
+ * @param int $contactId
+ * @return string|boolean
+ */
 function get_contribution_receive_date($contactId) {
   $result = civicrm_api3('Contribution', 'get', array(
     'sequential' => 1,
@@ -114,6 +143,12 @@ function get_contribution_receive_date($contactId) {
   return false;
 }
 
+/**
+ * Fetch all enabled fields for a webform.
+ * 
+ * @param int $webformNid
+ * @return array $enabledFields
+ */
 function get_webform_enabled_fields($webformNid) {
   $enabledFields = db_select('webform_component', 'wfc')
     ->fields('wfc', array('form_key'))
@@ -124,6 +159,13 @@ function get_webform_enabled_fields($webformNid) {
   return $enabledFields;
 }
 
+/**
+ * Function to check if the fields we are looking for exist on a webform.
+ * 
+ * @param array $enabledFields
+ * @param array $fieldsToCheck
+ * @return boolean
+ */
 function field_exists($enabledFields, $fieldsToCheck) {
   $fieldsNotPresent = array_diff($fieldsToCheck, $enabledFields);
   if ($fieldsNotPresent) {
@@ -132,6 +174,11 @@ function field_exists($enabledFields, $fieldsToCheck) {
   return true;
 }
 
+/**
+ * Function to check if giftaid civicrm extension is installed for CiviCRM.
+ * 
+ * @return boolean
+ */
 function check_giftaid_installed() {
   civicrm_initialize();
   $extensions = CRM_Core_PseudoConstant::getModuleExtensions();
