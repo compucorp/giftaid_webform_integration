@@ -6,7 +6,7 @@
 function giftaid_webform_integration_init() {
   if (check_giftaid_installed()) {
     global $base_url;
-    //Add our custom js to webform_civicrm admin pages.
+    // Add our custom js to webform_civicrm admin pages.
     $settings = array(
       'basePath' => $base_url,
       'eligibilityFieldName' => get_eligibility_form_key_name(),
@@ -23,7 +23,7 @@ function giftaid_webform_integration_webform_submission_insert($node, $submissio
     $enabledFields = get_webform_enabled_fields($node->nid);
     $eligibleForGiftAidField = get_eligibility_form_key_name();
 
-    //Only implement when Gift Aid field is enabled
+    // Only implement when Gift Aid field is enabled.
     if (field_exists($enabledFields, array($eligibleForGiftAidField))) {
       giftaid_wf_submission($node, $submission);
     }
@@ -35,12 +35,19 @@ function giftaid_webform_integration_webform_submission_insert($node, $submissio
  */
 function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) {
   if (check_giftaid_installed()) {
-    if($form_id == 'wf_crm_configure_form') {
+    if ($form_id == 'wf_crm_configure_form') {
       array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
     }
   }
 }
 
+/**
+ * This function contains the logic to make giftaid declaration from webform. 
+ * This is called inside giftaid_webform_integration_webform_submission_insert().
+ * 
+ * @param Object $node
+ * @param Object $submission
+ */
 function giftaid_wf_submission($node, $submission) {
   $webformNid = $submission->nid;
   $submittedValues = $submission->data;
@@ -52,15 +59,15 @@ function giftaid_wf_submission($node, $submission) {
 
   $contactId = $submittedValues[$webformFields['civicrm_1_contact_1_contact_existing']][0];
 
-  //get field key for eligibility
+  // get field key for eligibility.
   $eligibleForGiftAidField = get_eligibility_form_key_name();
   $eligibilityFieldId = $webformFields[$eligibleForGiftAidField];
 
-  //get address
+  // get address.
   $address = get_address($submittedValues, $webformFields);
   $postCode = $submittedValues[$webformFields['civicrm_1_contact_1_address_postal_code']][0];
 
-  //donot submit unless postcode is set
+  // donot submit unless postcode is set.
   if (!$postCode) {
     return false;
   }
@@ -73,7 +80,7 @@ function giftaid_wf_submission($node, $submission) {
       'address' => $address,
       'post_code' => $postCode,
     );
-    //Create giftaid declaration in CiviCRM
+    // Create giftaid declaration in CiviCRM.
     CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
   }
 }
@@ -87,9 +94,9 @@ function get_eligibility_form_key_name() {
   if(!defined('ELIGIBILITY_FIELD_KEY_PREFIX')) {
     define('ELIGIBILITY_FIELD_KEY_PREFIX', 'civicrm_1_contribution_1_');
   }
-  //CiviCRM boostrap.
+  // CiviCRM boostrap.
   civicrm_initialize();
-  //Get custom group and custom field ID for Eligible_For_Gift_Field from CiviCRM.
+  // Get custom group and custom field ID for Eligible_For_Gift_Field from CiviCRM.
   $customFieldData = civicrm_api3('CustomField', 'get', array(
     'sequential' => 1,
     'return' => "custom_group_id,id",
