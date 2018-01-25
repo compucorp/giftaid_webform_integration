@@ -1,208 +1,200 @@
 <?php
 
+/**
+ * Implements hook_init().
+ */
 function giftaid_webform_integration_init() {
-    if (check_giftaid_installed()) {
-        global $base_url;
+  if (check_giftaid_installed()) {
+    global $base_url;
+    // Add our custom js to webform_civicrm admin pages.
+    $settings = array(
+      'basePath' => $base_url,
+      'eligibilityFieldName' => get_eligibility_form_key_name(),
+    );
+    drupal_add_js(array('giftaidWebformIntegration' => $settings), 'setting');
+  }
+}
 
-        $settings = array(
-            'basePath' => $base_url,
-            'eligibilityFieldName' => get_eligibility_form_key_name(),
-            );
-        drupal_add_js(array('giftaidWebformIntegration' => $settings), 'setting');
+/**
+ * Implements hook_webform_submission_insert().
+ */
+function giftaid_webform_integration_webform_submission_insert($node, $submission) {
+  if (!empty($node->webform_civicrm)) {
+    $enabledFields = get_webform_enabled_fields($node->nid);
+    $eligibleForGiftAidField = get_eligibility_form_key_name();
+
+    // Only implement when Gift Aid field is enabled.
+    if (field_exists($enabledFields, array($eligibleForGiftAidField))) {
+      giftaid_wf_submission($node, $submission);
     }
+  }
 }
 
 /**
  * Implements hook_form_alter().
  */
 function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) {
-    if (check_giftaid_installed()) {
-        if($form_id == 'wf_crm_configure_form'){
-            array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
-        }
-
-        if (strpos($form_id, 'webform_client_form_') !== FALSE && !empty($form['#node']->webform_civicrm)) {
-            $enabledFields = get_webform_enabled_fields($form['#node']->nid);
-            $eligibleForGiftAidField = get_eligibility_form_key_name();
-
-        // Only implement when Gift Aid field is enabled
-            if (field_exists($enabledFields, array($eligibleForGiftAidField))) {
-                if (isset($form_state['input']['submitted'])) {
-                    $form['#submit'][] = 'giftaid_wf_submit';
-                }
-
-            //$form['#validate'][] = 'giftaid_wf_address_component_validate';
-            }
-        }
+  if (check_giftaid_installed()) {
+    if ($form_id == 'wf_crm_configure_form') {
+      array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
     }
+  }
 }
 
-/*function giftaid_wf_address_component_validate($form, &$form_state) {
-    $fieldsToCheck = array(
-        'civicrm_1_contact_1_address_street_address',
-        'civicrm_1_contact_1_address_city',
-        'civicrm_1_contact_1_address_state_province_id',
-        'civicrm_1_contact_1_address_postal_code'
+/**
+ * This function contains the logic to make giftaid declaration from webform. 
+ * This is called inside giftaid_webform_integration_webform_submission_insert().
+ * 
+ * @param Object $node
+ * @param Object $submission
+ */
+function giftaid_wf_submission($node, $submission) {
+  $webformNid = $submission->nid;
+  $submittedValues = $submission->data;
+  $webformFields = array();
+  $webformFields = $node->webform['components'];
+  foreach($node->webform['components'] as $component) {
+    $webformFields[$component['form_key']] = $component['cid'];
+  }
+
+  $contactId = $submittedValues[$webformFields['civicrm_1_contact_1_contact_existing']][0];
+
+  // get field key for eligibility.
+  $eligibleForGiftAidField = get_eligibility_form_key_name();
+  $eligibilityFieldId = $webformFields[$eligibleForGiftAidField];
+
+  // get address.
+  $address = get_address($submittedValues, $webformFields);
+  $postCode = $submittedValues[$webformFields['civicrm_1_contact_1_address_postal_code']][0];
+
+  // donot submit unless postcode is set.
+  if (!$postCode) {
+    return false;
+  }
+
+  if (isset($submittedValues[$eligibilityFieldId])) {
+    $params = array(
+      'entity_id' => $contactId,
+      'eligible_for_gift_aid' => $submittedValues[$eligibilityFieldId][0],
+      'start_date' => get_contribution_receive_date($contactId),
+      'address' => $address,
+      'post_code' => $postCode,
     );
-
-    $enabledFields = get_webform_enabled_fields($form['#node']->nid);
-    if (!field_exists($enabledFields, $fieldsToCheck)) {
-        form_set_error('form', 'Please Enable address fieds for Gift Aid to work');
-        return false;
-    }
-
-    return true;
-}*/
-
-function giftaid_wf_submit($form, &$form_state) {
-
-    // Donot submit unless the webform is complete
-    if(!$form_state['webform_completed']){
-        return false;
-    }
-
-    // get contact id
-    $contactId = $form_state['civicrm']['ent']['contact']['1']['id'];
-
-    // Webform node Id
-    $webformNid = $form['#node']->nid;
-
-    // get field key for eligibility
-    $webformFields = $form_state['webform']['component_tree']['children'];
-
-    $eligibleForGiftAidField = get_eligibility_form_key_name();
-    $eligibilityField = get_cid($webformNid, $eligibleForGiftAidField);
-    $eligibilityFieldId = $eligibilityField['cid'];
-
-    // get address
-    $address = get_address($webformNid, $form_state['values']['submitted']);
-    $postCode = get_post_code($webformNid, $form_state['values']['submitted']);
-
-    // donot submit unless postcode is set
-    if (!$postCode) {
-        return false;
-    }
-
-    $submittedValues = $form_state['values']['submitted'];
-    if (isset($submittedValues[$eligibilityFieldId]) && $submittedValues[$eligibilityFieldId] >= 1) {
-        // get contribution id
-        $contributionId = $form_state['civicrm']['ent']['contribution']['1']['id'];
-        $params = array(
-            'entity_id' => $contactId,
-            'eligible_for_gift_aid' => $submittedValues[$eligibilityFieldId],
-            'start_date' => get_contribution_receive_date($contributionId),
-            'address' => $address,
-            'post_code' => $postCode,
-            );
-        CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
-    }
+    // Create giftaid declaration in CiviCRM.
+    CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
+  }
 }
 
+/**
+ * Custom function to return giftaid eligibility field's form_key on a webform.
+ * 
+ * @return string|boolean
+ */
 function get_eligibility_form_key_name() {
-    civicrm_initialize();
-    $customFieldData = civicrm_api3('CustomField', 'get', array(
-        'sequential' => 1,
-        'return' => "custom_group_id,id",
-        'name' => "Eligible_For_Gift_Aid",
-        'custom_group_id' => "Gift_Aid",
-        ));
+  if(!defined('ELIGIBILITY_FIELD_KEY_PREFIX')) {
+    define('ELIGIBILITY_FIELD_KEY_PREFIX', 'civicrm_1_contribution_1_');
+  }
+  // CiviCRM boostrap.
+  civicrm_initialize();
+  // Get custom group and custom field ID for Eligible_For_Gift_Field from CiviCRM.
+  $customFieldData = civicrm_api3('CustomField', 'get', array(
+    'sequential' => 1,
+    'return' => "custom_group_id,id",
+    'name' => "Eligible_For_Gift_Aid",
+    'custom_group_id' => "Gift_Aid",
+  ));
+  /*
+   * Webform_CiviCRM follows specific logic to name civicrm fields on webform.
+   * Below logic provides us the form_key assigned to "Eligible for Gift Aid" field
+   * on webform.
+   */
+  if (!$customFieldData['is_error'] && $customFieldData['count'] > 0) {
+    $customGroupId = $customFieldData['values'][0]['custom_group_id'];
+    $customFieldId = $customFieldData['values'][0]['id'];
 
-    if (!$customFieldData['is_error']) {
-        $customGroupId = $customFieldData['values'][0]['custom_group_id'];
-        $customFieldId = $customFieldData['values'][0]['id'];
+    $fieldKey = "cg{$customGroupId}_custom_{$customFieldId}";
 
-        $fieldKey = "cg{$customGroupId}_custom_{$customFieldId}";
-
-        return "civicrm_1_contribution_1_{$fieldKey}";
-    }
-
-    return false;
+    return ELIGIBILITY_FIELD_KEY_PREFIX . $fieldKey;
+  }
+  return false;
 }
 
-function get_address($nid, $input) {
-
-    $streetField = get_cid($nid, 'civicrm_1_contact_1_address_street_address');
-    $streetFieldId = $streetField['cid'];
-
-    $cityField = get_cid($nid, 'civicrm_1_contact_1_address_city');
-    $cityFieldId = $cityField['cid'];
-
-    $stateField = get_cid($nid, 'civicrm_1_contact_1_address_state_province_id');
-    $stateFieldId = $stateField['cid'];
-
-    $address = $input[$streetFieldId] . ', '
-    . $input[$cityFieldId] . ', '
-    . $input[$stateFieldId];
-    //. CRM_Core_PseudoConstant::stateProvince($input[$stateFieldId], FALSE);
-    return $address;
+/**
+ * Fetch address components from webform submission and return addresss as string.
+ * 
+ * @param array $submittedValues
+ * @param array $webformFields
+ * @return string $address
+ */
+function get_address($submittedValues, $webformFields) {
+  $address = $submittedValues[$webformFields['civicrm_1_contact_1_address_street_address']][0] . ', ' 
+           . $submittedValues[$webformFields['civicrm_1_contact_1_address_city']][0] . ', ' 
+           . $submittedValues[$webformFields['civicrm_1_contact_1_address_state_province_id']][0];
+  return $address;
 }
 
-function get_post_code($nid, $input) {
-
-    $postalField = get_cid($nid, 'civicrm_1_contact_1_address_postal_code');
-    $postalFieldId = $postalField['cid'];
-
-    //TODO: Validate post code
-    if (isset($input[$postalFieldId])) {
-        return $input[$postalFieldId];
-    }
-
-    return false;
+/**
+ * Get receive_date from recently created contribution for the contact.
+ * 
+ * @param int $contactId
+ * @return string
+ */
+function get_contribution_receive_date($contactId) {
+  $result = civicrm_api3('Contribution', 'get', array(
+    'sequential' => 1,
+    'return' => "receive_date",
+    'contact_id' => $contactId,
+    'options' => array('sort' => "receive_date DESC", 'limit' => 1),
+  ));
+  if (!$result['is_error'] && $result['count'] > 0 && !empty($result['values'][0]['receive_date'])) {
+    return $result['values'][0]['receive_date'];
+  }
+  return date("Y-m-d h:i:s");
 }
 
-function get_contribution_receive_date($contributionId) {
-    $result = civicrm_api3('Contribution', 'get', array(
-        'sequential' => 1,
-        'return' => "receive_date",
-        'id' => $contributionId,
-        'options' => array('limit' => 1),
-        ));
-
-    if (!$result['is_error']) {
-        return $result['values'][0]['receive_date'];
-    }
-
-    return false;
-}
-
+/**
+ * Fetch all enabled fields for a webform.
+ * 
+ * @param int $webformNid
+ * @return array $enabledFields
+ */
 function get_webform_enabled_fields($webformNid) {
-    $enabledFields = db_select('webform_component', 'wfc')
+  $enabledFields = db_select('webform_component', 'wfc')
     ->fields('wfc', array('form_key'))
     ->condition('nid', $webformNid, '=')
     ->execute()
     ->fetchCol('form_key');
 
-    return $enabledFields;
+  return $enabledFields;
 }
 
+/**
+ * Function to check if the fields we are looking for exist on a webform.
+ * 
+ * @param array $enabledFields
+ * @param array $fieldsToCheck
+ * @return boolean
+ */
 function field_exists($enabledFields, $fieldsToCheck) {
-    $fieldsNotPresent = array_diff($fieldsToCheck, $enabledFields);
-
-    if ($fieldsNotPresent) {
-        return false;
-    }
-
-    return true;
+  $fieldsNotPresent = array_diff($fieldsToCheck, $enabledFields);
+  if ($fieldsNotPresent) {
+    return false;
+  }
+  return true;
 }
 
-function get_cid($nid, $form_key) {
-    $result = db_select('webform_component', 'wfc')
-    ->fields('wfc', array('cid', 'form_key'))
-    ->condition('nid', $nid, '=')
-    ->condition('form_key', $form_key, '=')
-    ->execute()
-    ->fetchAssoc();
-
-    return $result;
-}
-
+/**
+ * Function to check if giftaid civicrm extension is installed for CiviCRM.
+ * 
+ * @return boolean
+ */
 function check_giftaid_installed() {
-    civicrm_initialize();
-    $extensions = CRM_Core_PseudoConstant::getModuleExtensions();
-    foreach ($extensions as $key => $extension) {
-        if ($extension['prefix'] == 'civigiftaid') {
-            return TRUE;
-        }
+  civicrm_initialize();
+  $extensions = CRM_Core_PseudoConstant::getModuleExtensions();
+  foreach ($extensions as $key => $extension) {
+    if ($extension['prefix'] == 'civigiftaid') {
+      return TRUE;
     }
-    return FALSE;
+  }
+  return FALSE;
 }
