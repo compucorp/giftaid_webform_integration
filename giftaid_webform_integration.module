@@ -137,7 +137,7 @@ function get_address($submittedValues, $webformFields) {
  * Get receive_date from recently created contribution for the contact.
  * 
  * @param int $contactId
- * @return string|boolean
+ * @return string
  */
 function get_contribution_receive_date($contactId) {
   $result = civicrm_api3('Contribution', 'get', array(
@@ -146,10 +146,10 @@ function get_contribution_receive_date($contactId) {
     'contact_id' => $contactId,
     'options' => array('sort' => "receive_date DESC", 'limit' => 1),
   ));
-  if (!$result['is_error']) {
+  if (!$result['is_error'] && $result['count'] > 0 && !empty($result['values'][0]['receive_date'])) {
     return $result['values'][0]['receive_date'];
   }
-  return false;
+  return date("Y-m-d h:i:s");
 }
 
 /**
