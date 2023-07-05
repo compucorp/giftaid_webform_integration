@@ -169,7 +169,7 @@ function get_webform_enabled_fields($webformNid) {
     ->fields('wfc', array('form_key'))
     ->condition('nid', $webformNid, '=')
     ->execute()
-    ->fetchCol('form_key');
+    ->fetchCol();
 
   return $enabledFields;
 }
