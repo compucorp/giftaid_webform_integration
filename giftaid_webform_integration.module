@@ -82,7 +82,7 @@ function giftaid_wf_submission($node, $submission) {
       'post_code' => $postCode,
     );
     // Create giftaid declaration in CiviCRM.
-    CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
+    CRM_Civigiftaid_Declaration::setDeclaration($params);
   }
 }
 
@@ -150,7 +150,7 @@ function get_contribution_receive_date($contactId) {
     'options' => array('sort' => "receive_date DESC", 'limit' => 1),
   ));
   if (!$result['is_error'] && $result['count'] > 0 && !empty($result['values'][0]['receive_date'])) {
-    return $result['values'][0]['receive_date'];
+    return (new DateTime($result['values'][0]['receive_date']))->format('YmdHis');
   }
   return date("Y-m-d h:i:s");
 }
