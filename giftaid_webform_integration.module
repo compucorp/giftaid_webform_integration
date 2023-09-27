@@ -41,7 +41,9 @@ function giftaid_webform_integration_webform_submission_insert($node, $submissio
 function giftaid_webform_integration_form_alter(&$form, &$form_state, $form_id) {
   if (check_giftaid_installed()) {
     if ($form_id == 'wf_crm_configure_form') {
-      array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
+      if (isset($form['#attached']['js'])) {
+        array_unshift($form['#attached']['js'], drupal_get_path('module', 'giftaid_webform_integration') . '/js/giftaid.admin.js');
+      }
     }
   }
 }
