@@ -80,6 +80,7 @@ function giftaid_wf_submission($node, $submission) {
       'entity_id' => $contactId,
       'eligible_for_gift_aid' => $submittedValues[$eligibilityFieldId][0],
       'start_date' => get_contribution_receive_date($contactId),
+      'given_date' => get_contribution_receive_date($contactId),
       'address' => $address,
       'post_code' => $postCode,
     );
@@ -154,7 +155,7 @@ function get_contribution_receive_date($contactId) {
   if (!$result['is_error'] && $result['count'] > 0 && !empty($result['values'][0]['receive_date'])) {
     return (new DateTime($result['values'][0]['receive_date']))->format('YmdHis');
   }
-  return date("Y-m-d h:i:s");
+  return date("YmdHis");
 }
 
 /**
