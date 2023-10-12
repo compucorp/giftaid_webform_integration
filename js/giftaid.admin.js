@@ -7,10 +7,7 @@
                 var addressFieldName = "";
                 var fieldPartWeNeed = "";
                 var fieldsNotEnabled = [];
-                if ($('[name=contact_1_number_of_address]').val() == '0') {
-                    var msg = "You need to enable home address fields to make gift aid work.";
-                    return msg;
-                } else {
+                if ($('[name=contact_1_number_of_address]').val() != '0') {
                     var addressTypeElements = $("[name$=address_location_type_id]");
                     for (var i = 0; i < addressTypeElements.length; i++) {
                         var element = $('[name=' + addressTypeElements[i].name + ']');
@@ -43,18 +40,14 @@
                             var msg = "You must enable " + fieldsNotEnabled.join(', ') + " fields";
                             return msg;
                         }
-                    } else {
-                        var msg = "You need to enable home address fields to make gift aid work.";
-                        return msg;
                     }
-
                 }
             }
 
             function checkRequiredFields() {
                 if ($('[name=' + eligibilityFieldName + ']').prop('checked') == true) {
                     var msg = checkAddressFields();
-                    if (msg !== true) {
+                    if (msg !== true && msg !== undefined) {
                         if (!$('.giftaid-address-alert').length) {
                             $('[name=' + eligibilityFieldName + ']')
                                     .closest(".form-wrapper")
