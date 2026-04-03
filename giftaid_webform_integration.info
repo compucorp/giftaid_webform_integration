@@ -1,6 +1,6 @@
 name = Gift-Aid Webform Integration
 description = Integration of webform with CiviCRM Gift Aid Extension
 core = 7.x
-version = "7.x-7.0-alpha1"
+version = "7.x-7.0-beta1"
 package = CiviCRM
 dependencies[] = webform_civicrm
