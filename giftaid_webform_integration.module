@@ -130,10 +130,22 @@ function get_eligibility_form_key_name() {
  *   Parsed address.
  */
 function get_address($submittedValues, $webformFields) {
-  $address = $submittedValues[$webformFields['civicrm_1_contact_1_address_street_address']][0] . ', '
-           . $submittedValues[$webformFields['civicrm_1_contact_1_address_city']][0] . ', '
-           . $submittedValues[$webformFields['civicrm_1_contact_1_address_state_province_id']][0];
-  return $address;
+  $components = array();
+  $addressKeys = array(
+    'civicrm_1_contact_1_address_street_address',
+    'civicrm_1_contact_1_address_city',
+    'civicrm_1_contact_1_address_state_province_id',
+  );
+  foreach ($addressKeys as $key) {
+    if (empty($webformFields[$key])) {
+      continue;
+    }
+    $cid = $webformFields[$key];
+    if (isset($submittedValues[$cid][0]) && $submittedValues[$cid][0] !== '') {
+      $components[] = $submittedValues[$cid][0];
+    }
+  }
+  return implode(', ', $components);
 }
 
 /**
