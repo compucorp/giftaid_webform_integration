@@ -22,9 +22,7 @@
                         var fieldNamePartWeNeed = addressFieldName.replace('address_location_type_id', '');
                         var fieldNamesToCheck = [
                             'address_street_address',
-                            'address_city',
-                            'address_postal_code',
-                            'address_state_province_id'
+                            'address_postal_code'
                         ];
 
                         for (var i = 0; i < fieldNamesToCheck.length; i++) {
